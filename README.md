@@ -147,16 +147,6 @@ private function isLocalUrl($url)
 }
 ```
 
-## Timeline
-
-| Date | Action |
-|------|--------|
-| 2026-10-27 | Vulnerability discovered |
-| 2026-10-27 | VulDB submission |
-| Pending | Vendor notification |
-| Pending | CVE assignment |
-| Pending | Public disclosure |
-
 ## References
 
 - https://github.com/spotweb/spotweb
