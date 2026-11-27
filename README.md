@@ -9,7 +9,7 @@
 | **Affected Versions** | All versions (tested on latest) |
 | **Vulnerability Type** | Open Redirect (CWE-601) |
 | **CVSS 3.1 Score** | 6.1 (Medium) |
-| **CVE ID** | Pending |
+| **CVE ID** | CVE-2026-136991 |
 
 ## Description
 
